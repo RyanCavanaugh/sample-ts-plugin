@@ -73,9 +73,7 @@ To enable this plugin, users will add an entry to the `plugins` list in their `t
 {
     "compilerOptions": {
         "noImplicitAny": true,
-        "plugins": [
-            { "name": "sample-ts-plugin" }
-        ]
+        "plugins": [{ "name": "sample-ts-plugin" }]
     }
 }
 ```
@@ -120,16 +118,13 @@ The new `tsconfig.json` file might look like this:
 {
     "compilerOptions": {
         "noImplicitAny": true,
-        "plugins": [
-            {
-                "name": "sample-ts-plugin",
-                "remove": ["caller", "callee", "getDay"]
-             }
-        ]
+        "plugins": [{
+            "name": "sample-ts-plugin",
+            "remove": ["caller", "callee", "getDay"]
+        }]
     }
 }
 ```
-
 
 ## Debugging
 

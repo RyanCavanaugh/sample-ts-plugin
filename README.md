@@ -45,8 +45,6 @@ TypeScript Language Service Plugins use the [Decorator Pattern](https://en.wikip
 
 Let's fill in some more code to properly set up a decorator:
 ```ts
-import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
-
 function init(modules: {typescript: typeof ts_module}) {
     const ts = modules.typescript;
 
@@ -64,8 +62,6 @@ function init(modules: {typescript: typeof ts_module}) {
 
     return { create };
 }
-
-export = init;
 ```
 
 This sets up a "pass-through" decorator that invokes the underlying language service for all methods.
@@ -90,35 +86,12 @@ Let's modify the above pass-through plugin to add some new behavior.
 
 We'll change the `getCompletionsAtPosition` function to remove certain entries named `caller` from the completion list:
 ```ts
-import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
-
-function init(modules: {typescript: typeof ts_module}) {
-    const ts = modules.typescript;
-
-    function create(info: ts.server.PluginCreateInfo) {
-        // Set up decorator
-        const proxy = Object.create(null) as ts.LanguageService;
-        const oldLS = info.languageService;
-        for (const k in oldLS) {
-            (<any>proxy)[k] = function () {
-                return oldLS[k].apply(oldLS, arguments);
-            }
-        }
-
-        // Remove specified entries from completion list
-        proxy.getCompletionsAtPosition = (fileName, position) => {
-            const prior = info.languageService.getCompletionsAtPosition(fileName, position);
-            prior.entries = prior.entries.filter(e => e.name !== 'caller');
-            return prior;
-        };
-
-        return proxy;
-    }
-
-    return { create };
-}
-
-export = init;
+// Remove specified entries from completion list
+proxy.getCompletionsAtPosition = (fileName, position) => {
+    const prior = info.languageService.getCompletionsAtPosition(fileName, position);
+    prior.entries = prior.entries.filter(e => e.name !== 'caller');
+    return prior;
+};
 ```
 
 ## Handling User Configuration
@@ -127,39 +100,19 @@ Users can customize your plugin behavior by providing additional data in their `
 
 Let's allow the user to customize the list of names to remove from the completion list:
 ```ts
-import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
+function create(info: ts.server.PluginCreateInfo) {
+    // Get a list of things to remove from the completion list from the config object.
+    // If nothing was specified, we'll just remove 'caller'
+    const whatToRemove: string[] = info.config.remove || ['caller'];
+    
+    // ... (set up decorator here) ...
 
-function init(modules: {typescript: typeof ts_module}) {
-    const ts = modules.typescript;
-
-    function create(info: ts.server.PluginCreateInfo) {
-        // Get a list of things to remove from the completion list from the config object.
-        // If nothing was specified, we'll just remove 'caller'
-        const whatToRemove: string[] = info.config.remove || ['caller'];
-
-        // Set up decorator
-        const proxy = Object.create(null) as ts.LanguageService;
-        const oldLS = info.languageService;
-        for (const k in oldLS) {
-            (<any>proxy)[k] = function () {
-                return oldLS[k].apply(oldLS, arguments);
-            }
-        }
-
-        // Remove specified entries from completion list
-        proxy.getCompletionsAtPosition = (fileName, position) => {
-            const prior = info.languageService.getCompletionsAtPosition(fileName, position);
-            prior.entries = prior.entries.filter(e => whatToRemove.indexOf(e.name) < 0);
-            return prior;
-        };
-
-        return proxy;
-    }
-
-    return { create };
-}
-
-export = init;
+    // Remove specified entries from completion list
+    proxy.getCompletionsAtPosition = (fileName, position) => {
+        const prior = info.languageService.getCompletionsAtPosition(fileName, position);
+        prior.entries = prior.entries.filter(e => whatToRemove.indexOf(e.name) < 0);
+        return prior;
+    };
 ```
 
 The new `tsconfig.json` file might look like this:
@@ -198,6 +151,54 @@ You can write to this log by calling into the TypeScript project's logging servi
         info.project.projectService.logger.info("I'm getting set up now! Check the log for this message.");
 ```
 
+## Putting it all together
+
+```ts
+import * as ts_module from "../node_modules/typescript/lib/tsserverlibrary";
+
+function init(modules: {typescript: typeof ts_module}) {
+    const ts = modules.typescript;
+
+    function create(info: ts.server.PluginCreateInfo) {
+        // Get a list of things to remove from the completion list from the config object.
+        // If nothing was specified, we'll just remove 'caller'
+        const whatToRemove: string[] = info.config.remove || ['caller'];
+
+        // Diagnostic logging
+        info.project.projectService.logger.info("I'm getting set up now! Check the log for this message.");
+
+        // Set up decorator
+   	    const proxy = Object.create(null) as ts.LanguageService;
+	    const oldLS = info.languageService;
+	    for (const k in oldLS) {
+	        (<any>proxy)[k] = function () {
+	            return oldLS[k].apply(oldLS, arguments);
+	        }
+	    }
+
+        // Remove specified entries from completion list
+        proxy.getCompletionsAtPosition = (fileName, position) => {
+            const prior = info.languageService.getCompletionsAtPosition(fileName, position);
+            const oldLength = prior.entries.length;
+            prior.entries = prior.entries.filter(e => whatToRemove.indexOf(e.name) < 0);
+
+            // Sample logging for diagnostic purposes
+            if (oldLength !== prior.entries.length) {
+                info.project.projectService.logger.info(`Removed ${oldLength - prior.entries.length} entries from the completion list`);
+            }
+
+            return prior;
+        };
+
+        return proxy;
+    }
+
+    return { create };
+}
+
+export = init;
+```
+
 ## Testing Locally
 
 Local testing of your plugin is similar to testing other node modules. To set up a sample project where you can easily test plugin changes:
@@ -205,3 +206,9 @@ Local testing of your plugin is similar to testing other node modules. To set up
  * Run `npm link` from your plugin directory
  * In your sample project, run `npm link your_plugin_name`
  * Add an entry to the `plugins` field of the `tsconfig.json`
+ * Rebuild your plugin and restart your editor to pick up code changes
+
+## Real-world Plugins
+
+Some other TypeScript Language Service Plugin implementations you can look at for reference:
+* https://github.com/angular/angular/blob/master/modules/%40angular/language-service/src/ts_plugin.ts

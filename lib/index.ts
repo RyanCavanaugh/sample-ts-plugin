@@ -27,7 +27,7 @@ function init(modules: {typescript: typeof ts_module}) {
             prior.entries = prior.entries.filter(e => whatToRemove.indexOf(e.name) < 0);
 
             // Sample logging for diagnostic purposes
-            if (oldLength != prior.entries.length) {
+            if (oldLength !== prior.entries.length) {
                 info.project.projectService.logger.info(`Removed ${oldLength - prior.entries.length} entries from the completion list`);
             }
 

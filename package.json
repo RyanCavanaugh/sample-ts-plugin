@@ -1,0 +1,26 @@
+{
+  "name": "sample-ts-plugin",
+  "version": "1.0.0",
+  "description": "Sample TypeScript Language Service Plugin",
+  "main": "bin/index.js",
+  "scripts": {
+    "prepublish": "node node_modules/typescript/lib/tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RyanCavanaugh/sample-ts-plugin.git"
+  },
+  "keywords": [
+    "typescript"
+  ],
+  "author": "Ryan Cavanaugh",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/RyanCavanaugh/sample-ts-plugin/issues"
+  },
+  "homepage": "https://github.com/RyanCavanaugh/sample-ts-plugin#readme",
+  "devDependencies": {
+    "typescript": "^2.2.0-dev.20170213"
+  }
+}
